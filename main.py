@@ -17,6 +17,7 @@ character_index = 0
 pygame.display.set_caption("Running Game")
 clock = pygame.time.Clock()
 FPS = 60
+game_score = 0
 
 #Load Assets
 
@@ -38,6 +39,9 @@ font = pygame.font.Font('fonts/Jersey15-Regular.ttf',32)
 
 #sound
 jump_sound = pygame.mixer.Sound("gallery/audio/jump.mp3")
+back_sound = pygame.mixer.Sound('gallery/audio/backsound.mp3')
+back_sound.play(loops=-1)
+back_sound.set_volume(0.5)
 
 #enemy
 enemy_frame1 = pygame.image.load("gallery/sprites/enemies/Enemy.png").convert_alpha()
@@ -101,6 +105,7 @@ def player_animation():
         player = player_walk[int(player_index)]
 
 def obstacle_movement(obstacle_list):
+    global game_score
     if obstacle_list:
         for obstacle_rect in obstacle_list:
             obstacle_rect.x -= 5
@@ -108,8 +113,15 @@ def obstacle_movement(obstacle_list):
                 window_screen.blit(enemy, obstacle_rect)
             else:
                 window_screen.blit(enemy2, obstacle_rect)
-        obstacle_list = [obstacle for obstacle in obstacle_list if obstacle.x > -100]
-        return obstacle_list
+        
+        new_obstacle_list = []
+        for obstacle in obstacle_list:
+            if obstacle.x > -100:
+                new_obstacle_list.append(obstacle)
+            else:
+                game_score += 1 
+                
+        return new_obstacle_list
     else:
         return []
 
@@ -136,25 +148,33 @@ def spawn_enemy():
         enemy2 = enemy2_frames[enemy2_frame_index]
 
 def display_score():
-    current_time = int(pygame.time.get_ticks() / 600) - start_time
-    score = font.render(f"{current_time}", False, "white")
-    score_rect = score.get_rect(center = (400, 50))
-    window_screen.blit(score, score_rect)
-    return current_time
+    score_surface = font.render(f"Score: {game_score}", False, "white")
+    score_rect = score_surface.get_rect(center=(400, 50))
+    window_screen.blit(score_surface, score_rect)
+    return game_score
 
+def check_collisions(player, obstacles):
+    if obstacles:
+        for obstacle_rect in obstacles:
+            if player.colliderect(obstacle_rect):
+                return False 
+    return True
 
 #Main game loop
 while True:
-
     for event in pygame.event.get():
         if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
             pygame.quit()
             exit()
         else:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                game_active = True
-                start_time = int(pygame.time.get_ticks() / 600)
+                if not game_active:
+                    game_active = True
+                    game_score = 0 
+                    obstacle_rect_list.clear() 
+                    player_rect.midbottom = (80, 320) 
                 spawn_enemy()
+            
             if event.type == pygame.KEYDOWN and player_rect.bottom == 320:
                 if event.key == pygame.K_SPACE:
                     player_gravity = -20
@@ -163,6 +183,8 @@ while True:
     if game_active:
         active_game()
         spawn_enemy()
+        
+        game_active = check_collisions(player_rect, obstacle_rect_list)
     else:
         inactive_game()
 

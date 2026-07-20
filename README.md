@@ -1,1 +1,0 @@
-Jalankan menggunakan python 3.9
